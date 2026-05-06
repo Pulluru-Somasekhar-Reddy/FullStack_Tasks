@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+<title>Dashboard</title>
+</head>
+
+<body>
+
+<div class="navbar">
+<button onclick="show('home')">Home</button>
+<button id="addBtn" onclick="show('add')">Add Event</button>
+<button id="deleteBtn" onclick="show('delete')">Delete Event</button>
+<button onclick="show('feedback')">Feedback</button>
+<button onclick="logout()" style="background:red;">Logout</button>
+</div>
+
+<!-- HOME -->
+<div id="home">
+<h2>Events</h2>
+<div id="events"></div>
+</div>
+
+<!-- ADD -->
+<div id="add" style="display:none">
+
+<h2>Add Event</h2>
+
+<label>Title</label>
+<input id="title" placeholder="Enter title">
+
+<label>Description</label>
+<input id="desc" placeholder="Enter description">
+
+<label>Date</label>
+<input id="date" type="date">
+
+<label>Price</label>
+<input id="price" type="number" placeholder="Enter price">
+
+<button onclick="addEvent()">Add Event</button>
+
+</div>
+
+<!-- DELETE -->
+<div id="delete" style="display:none">
+<h2>Delete Events</h2>
+<div id="deleteEvents"></div>
+</div>
+
+<!-- FEEDBACK -->
+<div id="feedback" style="display:none">
+<h2>Feedback</h2>
+
+<label>Select Event</label>
+<select id="eventSelect"></select>
+
+<label>Comments</label>
+<input id="comments" placeholder="Enter comments">
+
+<label>Rating (1-5)</label>
+<input id="rating" type="number" min="1" max="5">
+
+<button onclick="sendFeedback()">Submit</button>
+</div>
+
+<script>
+
+/* ================= USER ================= */
+const user = JSON.parse(localStorage.getItem("user"));
+
+if(!user){
+window.location="index.html";
+}
+
+/* ADMIN CONTROL */
+if(user.role !== "admin"){
+document.getElementById("addBtn").style.display="none";
+document.getElementById("deleteBtn").style.display="none";
+}
+
+/* ================= NAVIGATION ================= */
+function show(section){
+
+["home","add","delete","feedback"].forEach(sec=>{
+document.getElementById(sec).style.display="none";
+});
+
+document.getElementById(section).style.display="block";
+
+/* reload when going home */
+if(section === "home"){
+loadEvents();
+}
+}
+
+/* ================= LOGOUT ================= */
+function logout(){
+localStorage.removeItem("user");
+window.location="index.html";
+}
+
+/* ================= LOAD EVENTS ================= */
+function loadEvents(){
+
+fetch("/events")
+.then(res=>res.json())
+.then(data=>{
+
+let html="";
+let del="";
+let opt="";
+
+data.forEach(e=>{
+
+/* HOME VIEW */
+html += `
+<div class="eventCard">
+<h3>${e.title}</h3>
+<p>${e.description}</p>
+<p>Date: ${e.date}</p>
+<p>₹${e.price}</p>
+
+<button onclick="book(${e.id})">Book</button>
+
+<div id="qr-${e.id}"></div>
+</div>
+`;
+
+/* DELETE VIEW */
+del += `
+<div class="eventCard">
+<h3>${e.title}</h3>
+<button onclick="deleteEvent(${e.id})">Delete</button>
+</div>
+`;
+
+/* FEEDBACK DROPDOWN */
+opt += `<option value="${e.id}">${e.title}</option>`;
+
+});
+
+/* UPDATE UI */
+document.getElementById("events").innerHTML = html;
+document.getElementById("deleteEvents").innerHTML = del;
+document.getElementById("eventSelect").innerHTML = opt;
+
+});
+}
+
+/* LOAD INITIALLY */
+loadEvents();
+
+/* ================= BOOK EVENT ================= */
+function book(id){
+
+fetch("/book",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user_id:user.id,
+event_id:id
+})
+})
+.then(res=>res.json())
+.then(data=>{
+
+if(data.qr){
+document.getElementById(`qr-${id}`).innerHTML =
+`<img src="${data.qr}" width="120">`;
+}else{
+alert("Booking failed");
+}
+
+});
+}
+
+/* ================= ADD EVENT (FIXED) ================= */
+function addEvent(){
+
+if(!title.value || !desc.value || !date.value || !price.value){
+alert("Please fill all fields");
+return;
+}
+
+fetch("/add-event",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+title:title.value,
+description:desc.value,
+date:date.value,
+price:price.value,
+user_role:user.role
+})
+})
+.then(res=>res.text())
+.then(data=>{
+
+alert(data);
+
+/* CLEAR FORM */
+title.value="";
+desc.value="";
+date.value="";
+price.value="";
+
+/* 🔥 RELOAD EVENTS */
+loadEvents();
+
+/* GO TO HOME */
+show("home");
+
+});
+}
+
+/* ================= DELETE EVENT ================= */
+function deleteEvent(id){
+
+if(!confirm("Are you sure to delete this event?")) return;
+
+fetch(`/delete-event/${id}`,{
+method:"DELETE",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user_role:user.role
+})
+})
+.then(res=>res.text())
+.then(data=>{
+alert(data);
+loadEvents();
+});
+}
+
+/* ================= FEEDBACK ================= */
+function sendFeedback(){
+
+if(!eventSelect.value || !comments.value || !rating.value){
+alert("Fill all fields");
+return;
+}
+
+fetch("/feedback",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user_id:user.id,
+event_id:eventSelect.value,
+comments:comments.value,
+rating:rating.value
+})
+})
+.then(res=>res.text())
+.then(data=>{
+alert(data);
+
+/* CLEAR */
+comments.value="";
+rating.value="";
+});
+}
+
+</script>
+
+</body>
+</html>

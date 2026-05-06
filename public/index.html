@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Login</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="wrapper">
+<p><strong>End-to-End Event Lifecycle & Ticketing Platform</strong></p><div class="card">
+
+<div class="toggle">
+<button id="loginTab" class="active" onclick="showLogin()">Login</button>
+<button id="registerTab" onclick="showRegister()">Register</button>
+</div>
+
+<!-- LOGIN -->
+<div id="loginForm">
+<h2>Login</h2>
+<input id="loginEmail" placeholder="Email">
+<input id="loginPassword" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
+</div>
+
+<!-- REGISTER -->
+<div id="registerForm" style="display:none">
+<h2>Register</h2>
+<input id="name" placeholder="Name">
+<input id="email" placeholder="Email">
+<input id="password" type="password">
+<button onclick="register()">Register</button>
+</div>
+
+</div>
+</div>
+
+<script>
+function showLogin(){
+loginForm.style.display="block";
+registerForm.style.display="none";
+}
+
+function showRegister(){
+loginForm.style.display="none";
+registerForm.style.display="block";
+}
+
+function register(){
+fetch("/register",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+name:name.value,
+email:email.value,
+password:password.value
+})
+}).then(res=>res.text()).then(alert);
+}
+
+function login(){
+fetch("/login",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+email:loginEmail.value,
+password:loginPassword.value
+})
+})
+.then(res=>res.json())
+.then(data=>{
+if(data.message==="Login Success"){
+localStorage.setItem("user",JSON.stringify(data.user));
+window.location="dashboard.html";
+}else alert("Invalid");
+});
+}
+</script>
+
+</body>
+</html>
